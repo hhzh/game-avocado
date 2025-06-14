@@ -1,0 +1,52 @@
+body {
+  background: #fafafa;
+  color: #222;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  text-align: center;
+}
+h1 {
+  font-weight: 400;
+  margin: 20px 0 10px 0;
+}
+#controls {
+  margin: 10px auto 10px auto;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+#controls label {
+  margin: 0 8px;
+  font-size: 15px;
+}
+#startBtn {
+  margin-left: 10px;
+  padding: 2px 12px;
+  font-size: 15px;
+}
+#dayCounter {
+  margin: 10px auto 0 auto;
+  font-size: 18px;
+  font-weight: 500;
+}
+#mainArea {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0;
+}
+#chartCanvas {
+  background: #fafafa;
+  border: 1px solid #eee;
+  margin-right: 0;
+  margin-top: 10px;
+}
+#gameCanvas {
+  background: transparent;
+  border: none;
+  margin-top: 10px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
