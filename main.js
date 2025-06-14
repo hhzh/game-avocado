@@ -45,20 +45,22 @@ function distance(a, b) {
 }
 
 class Avocado {
-  constructor(home) {
+  constructor(home, type = 'green') {
     this.home = home;
     this.x = home.x;
     this.y = home.y;
+    this.type = type; // 'green' or 'red' or 'black'
     this.energy = 0;
     this.foodEatenToday = 0;
     this.foodEatenForReproduce = 0;
     this.target = null;
     this.isAtHome = true;
     this.wantReproduce = false;
+    this.redDays = 0; // 红色牛油果存活天数
   }
   resetForNewDay(isFirstDay) {
     if (isFirstDay) {
-      this.energy = 20; // 只有第一天初始能量为20
+      this.energy = this.type === 'red' ? 100 : 20;
     }
     this.foodEatenToday = 0;
     this.wantReproduce = false;
@@ -66,6 +68,11 @@ class Avocado {
     this.y = this.home.y;
     this.target = null;
     this.isAtHome = true;
+    if (this.type === 'red') {
+      this.redDays = (this.redDays || 0) + 1;
+    } else {
+      this.redDays = 0;
+    }
   }
   goForage() {
     this.target = randomInDisk();
@@ -84,7 +91,13 @@ class Avocado {
     } else {
       this.x += dx / dist * step;
       this.y += dy / dist * step;
-      this.energy -= ENERGY_PER_STEP;
+      if (this.type === 'black') {
+        this.energy -= 5;
+      } else if (this.type === 'red') {
+        this.energy -= 2;
+      } else {
+        this.energy -= ENERGY_PER_STEP;
+      }
     }
   }
   goHome() {
@@ -104,10 +117,13 @@ class Food {
 
 function spawnAvocados() {
   avocados = [];
+  // 普通牛油果
   for (let i = 0; i < AVOCADO_COUNT; i++) {
     const home = randomOnCircleEdge();
-    avocados.push(new Avocado(home));
+    const avo = new Avocado(home, 'green');
+    avocados.push(avo);
   }
+  // 不再生成红色牛油果
 }
 function spawnFoods() {
   foods = [];
@@ -126,12 +142,12 @@ function drawDisk() {
   ctx.fill();
   ctx.restore();
 }
-function drawAvocado(x, y) {
+function drawAvocado(x, y, type = 'green') {
   ctx.save();
   ctx.translate(x, y);
   ctx.beginPath();
   ctx.ellipse(0, 0, 10, 14, 0, 0, 2 * Math.PI);
-  ctx.fillStyle = '#7ed957';
+  ctx.fillStyle = type === 'red' ? '#e74c3c' : (type === 'black' ? '#222' : '#7ed957');
   ctx.fill();
   ctx.beginPath();
   ctx.arc(0, 4, 4, 0, 2 * Math.PI);
@@ -158,7 +174,7 @@ function drawChart() {
   chartCtx.stroke();
 
   // 画Y轴刻度和标签（牛油果数量）
-  let maxY = Math.max(...avocadoHistory, 10);
+  let maxY = Math.max(...avocadoHistory.map(h => Math.max(h.green, h.red, h.black)), 10);
   let minY = 0;
   chartCtx.fillStyle = '#444';
   chartCtx.font = '12px sans-serif';
@@ -186,14 +202,36 @@ function drawChart() {
     chartCtx.stroke();
   }
 
-  // 画折线
+  // 画绿色牛油果折线
   if (avocadoHistory.length > 1) {
     chartCtx.strokeStyle = '#7ed957';
     chartCtx.lineWidth = 2;
     chartCtx.beginPath();
     for (let i = 0; i < avocadoHistory.length; i++) {
       let x = 40 + (330 * i / maxX);
-      let y = 580 - (540 * (avocadoHistory[i] - minY) / (maxY - minY + 1e-6));
+      let y = 580 - (540 * (avocadoHistory[i].green - minY) / (maxY - minY + 1e-6));
+      if (i === 0) chartCtx.moveTo(x, y);
+      else chartCtx.lineTo(x, y);
+    }
+    chartCtx.stroke();
+    // 画红色牛油果折线
+    chartCtx.strokeStyle = '#e74c3c';
+    chartCtx.lineWidth = 2;
+    chartCtx.beginPath();
+    for (let i = 0; i < avocadoHistory.length; i++) {
+      let x = 40 + (330 * i / maxX);
+      let y = 580 - (540 * (avocadoHistory[i].red - minY) / (maxY - minY + 1e-6));
+      if (i === 0) chartCtx.moveTo(x, y);
+      else chartCtx.lineTo(x, y);
+    }
+    chartCtx.stroke();
+    // 画黑色牛油果折线
+    chartCtx.strokeStyle = '#222';
+    chartCtx.lineWidth = 2;
+    chartCtx.beginPath();
+    for (let i = 0; i < avocadoHistory.length; i++) {
+      let x = 40 + (330 * i / maxX);
+      let y = 580 - (540 * (avocadoHistory[i].black - minY) / (maxY - minY + 1e-6));
       if (i === 0) chartCtx.moveTo(x, y);
       else chartCtx.lineTo(x, y);
     }
@@ -209,6 +247,21 @@ function drawChart() {
   chartCtx.fillText('数量', 0, 0);
   chartCtx.restore();
   chartCtx.fillText('天数', 120, 595);
+  // 图例
+  chartCtx.fillStyle = '#7ed957';
+  chartCtx.fillRect(280, 30, 16, 8);
+  chartCtx.fillStyle = '#222';
+  chartCtx.fillText('绿色牛油果', 300, 38);
+
+  chartCtx.fillStyle = '#e74c3c';
+  chartCtx.fillRect(280, 55, 16, 8);
+  chartCtx.fillStyle = '#222';
+  chartCtx.fillText('红色牛油果', 300, 63);
+
+  chartCtx.fillStyle = '#222';
+  chartCtx.fillRect(280, 80, 16, 8);
+  chartCtx.fillStyle = '#222';
+  chartCtx.fillText('黑色牛油果', 300, 88);
 }
 
 
@@ -224,16 +277,66 @@ function update() {
     for (const avo of avocados) {
       avo.resetForNewDay(day === 0);
     }
+    // 绿色牛油果有5%概率变成红色牛油果
+    for (const avo of avocados) {
+      if (avo.type === 'green' && Math.random() < 0.05) {
+        avo.type = 'red';
+        avo.energy = 100;
+        avo.redDays = 1;
+      }
+    }
+    // 红色牛油果存活5天后有50%概率变回绿色牛油果
+    for (const avo of avocados) {
+      if (avo.type === 'red' && avo.redDays >= 5 && Math.random() < 0.5) {
+        avo.type = 'green';
+        avo.energy = 20;
+        avo.redDays = 0;
+      }
+    }
+    // 黑色牛油果每天有5%概率死亡
+    for (let i = avocados.length - 1; i >= 0; i--) {
+      const avo = avocados[i];
+      if (avo.type === 'black' && Math.random() < 0.05) {
+        avocados.splice(i, 1);
+      }
+    }
+    // 判断是否丰收年或灾荒年
+    let foodMultiplier = 1;
+    let yearEvent = null;
+    let rand = Math.random();
+    if (rand < 0.05) {
+      if (Math.random() < 0.5) {
+        foodMultiplier = 2;
+        yearEvent = '丰收年';
+      } else {
+        foodMultiplier = 0.5;
+        yearEvent = '灾荒年';
+      }
+      console.log('本年为：' + yearEvent);
+    }
     // 前一天吃够2个食物的牛油果，今天繁殖
     for (const avo of reproduceQueue) {
-      const home = randomOnCircleEdge();
-      const newAvo = new Avocado(home);
-      newAvo.energy = 20; // 新生成的牛油果自带20能量
-      avocados.push(newAvo);
+      if (avo.type === 'black') continue; // 黑色牛油果无法繁殖
+      if (avo.type === 'green') {
+        for (let k = 0; k < 2; k++) {
+          const home = randomOnCircleEdge();
+          const newAvo = new Avocado(home, avo.type);
+          newAvo.energy = 20;
+          avocados.push(newAvo);
+        }
+      } else {
+        const home = randomOnCircleEdge();
+        const newAvo = new Avocado(home, avo.type);
+        newAvo.energy = avo.type === 'red' ? 100 : 20;
+        avocados.push(newAvo);
+      }
     }
     reproduceQueue = [];
     // 记录历史
-    avocadoHistory.push(avocados.length);
+    let greenCount = avocados.filter(a => a.type === 'green').length;
+    let redCount = avocados.filter(a => a.type === 'red').length;
+    let blackCount = avocados.filter(a => a.type === 'black').length;
+    avocadoHistory.push({ green: greenCount, red: redCount, black: blackCount });
     drawChart();
     // 如果牛油果数量为0，停止运行
     if (avocados.length === 0) {
@@ -245,6 +348,8 @@ function update() {
     for (const avo of avocados) {
       avo.goForage();
     }
+    // 设置本年食物补充倍数
+    update.foodMultiplier = foodMultiplier;
     gamePhase = 1;
     phaseFrame = 0;
     return;
@@ -252,6 +357,49 @@ function update() {
   if (gamePhase === 1) {
     // 觅食阶段
     let allArrived = true;
+    // 先处理黑化和捕食逻辑
+    for (let i = avocados.length - 1; i >= 0; i--) {
+      const avo = avocados[i];
+      // 普通牛油果能量≤3时有10%概率尝试吃掉附近其他牛油果
+      if (avo.type === 'green' && avo.energy <= 3 && Math.random() < 0.1) {
+        let minDist = 9999, targetIdx = -1;
+        for (let j = 0; j < avocados.length; j++) {
+          if (i === j) continue;
+          const other = avocados[j];
+          if (other.type === 'black') continue;
+          let d = distance(avo, other);
+          if (d < 18 && d < minDist) {
+            minDist = d;
+            targetIdx = j;
+          }
+        }
+        if (targetIdx !== -1) {
+          avo.type = 'black';
+          avo.energy = avocados[targetIdx].energy;
+          avocados.splice(targetIdx, 1);
+          if (targetIdx < i) i--;
+        }
+      }
+      // 黑色牛油果可以吃掉任何其他牛油果
+      if (avo.type === 'black') {
+        let minDist = 9999, targetIdx = -1;
+        for (let j = 0; j < avocados.length; j++) {
+          if (i === j) continue;
+          const other = avocados[j];
+          let d = distance(avo, other);
+          if (d < 18 && d < minDist) {
+            minDist = d;
+            targetIdx = j;
+          }
+        }
+        if (targetIdx !== -1) {
+          avo.energy += avocados[targetIdx].energy;
+          avocados.splice(targetIdx, 1);
+          if (targetIdx < i) i--;
+        }
+      }
+    }
+    // 再遍历所有牛油果执行移动和能量判断
     for (let i = avocados.length - 1; i >= 0; i--) {
       const avo = avocados[i];
       if (avo.target) {
@@ -316,10 +464,13 @@ function update() {
           reproduceQueue.push(avo);
         }
       }
-      while (foods.length < FOOD_COUNT) {
+      // 按丰收/灾荒年补充食物
+      let multiplier = update.foodMultiplier || 1;
+      while (foods.length < Math.floor(FOOD_COUNT * multiplier)) {
         const pos = randomInDisk();
         foods.push(new Food(pos.x, pos.y));
       }
+      update.foodMultiplier = 1; // 恢复默认
       gamePhase = 0;
       phaseFrame = 0;
       day++;
@@ -336,7 +487,7 @@ function draw() {
     drawFood(food.x, food.y);
   }
   for (const avo of avocados) {
-    drawAvocado(avo.x, avo.y);
+    drawAvocado(avo.x, avo.y, avo.type);
   }
 }
 function updateDayCounter() {
